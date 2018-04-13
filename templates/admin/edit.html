@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <title>{{#data:key/"project.title"}}</title>
+
+    {{#Include:template/"templates.admin.main-css"}}
+
+    {{#Include:template/"templates.admin.meta"}}
+</head>
+<body>
+
+{{#Include:template/"templates.admin.sidebar"}}
+
+{{#Include:template/"templates.admin.header"}}
+
+<div id="editSection_{{#data:key/requestId}}" class="contentArea extraPadding editSection" reqId="{{#data:key/requestId}}">
+
+    <div class="editData">
+        {{#data:key/"modelViewHelper"
+        /str/"%modelName <i class='fa fa-chevron-right' aria-hidden='true'></i>"}} ID: {{#data:key/objId}}
+        <i class="fa fa-chevron-right" aria-hidden="true"></i> Last Edit:
+        <span class="localDateTime">{{#data:key/"dataSource.modifiedTime"}}</span></div>
+    <div id="editArea" class="editArea well">
+
+        <form id="editForm" method="post">
+            <div id="inputs"></div>
+            <div class="controlSection">
+                {{#data:key/"allowSave"
+                    /str/"<input type='submit' id='editSubmitBtn' class='btn' value='%saveChangesText'/>
+                <span id='editLoading' style='display:none;'><i class='fa fa-spinner fa-pulse fa-2x fa-fw'></i>
+                <span class='sr-only'>Please Wait...</span></span>"}}
+
+                {{#data:key/"allowClone"
+                    /str/"<div id='cloneBtn' class='clone' ><i class='fa fa-clone' aria-hidden='true'></i></div>"}}
+
+                {{#data:key/"allowDelete"
+                    /str/"<div id='deleteBtn' class='delete' ><i class='fa fa-trash' aria-hidden='true'></i></div>
+                        <div id='deleteConfirmBtn' class='delete' style='display:none;' >
+                        <i class='fa fa-exclamation-triangle' aria-hidden='true'></i> Are you sure?
+                    </div>"}}
+            </div>
+        </form>
+    </div>
+    <div id="warning" class="well warning" style="display:none;"></div>
+    <div id="success" class="well success" style="display:none;">Save Successful!</div>
+</div>
+
+<script type="text/javascript">
+
+    var globalForms = globalForms || {};
+    function formEdit_{{#data:key/requestId}}(dataIn){
+
+        var self = this;
+        self.reqId = '{{#data:key/requestId}}';
+        self.editDiv = $('#editSection_'+self.reqId);
+        self.dataset = JSON.parse("{{#data:key/view/withSlashesJSON/1}}");
+        self.currData = dataIn || JSON.parse("{{#data:key/obj/withSlashesJSON/1}}");
+        self.context = "{{#data:key/context/withSlashes/1}}" || "edit";
+
+
+
+  self.dataset.context = self.context;
+
+  self.deleteTimer = null;
+  self.showConfirm = function()
+  {
+      self.editDiv.find('#deleteBtn').hide();
+      self.editDiv.find('#deleteConfirmBtn').delay(250).fadeIn(300);
+      self.deleteTimer = setTimeout(function(){
+          self.cancelDelete();
+      }, 5000);
+  }
+
+  self.showInlineConfirm = function(obj)
+  {
+      $(obj).hide();
+      var deleteKey = $(obj).attr('deleteKey');
+      self.editDiv.find('div[deleteConfirmKey="'+deleteKey+'"]').delay(250).fadeIn(300);
+      self.deleteTimer = setTimeout(function(){
+          self.cancelInlineDelete(deleteKey);
+      }, 5000);
+  }
+
+  self.cancelDelete = function()
+  {
+      self.deleteTimer = null;
+      self.editDiv.find('#deleteConfirmBtn').fadeOut(300);
+      self.editDiv.find('#deleteBtn').delay(300).fadeIn(300);
+  }
+
+  self.cancelInlineDelete = function(deleteKey)
+  {
+      self.deleteTimer = null;
+      self.editDiv.find('div[deleteConfirmKey="'+deleteKey+'"]').fadeOut(300);
+      self.editDiv.find('div[deleteKey="'+deleteKey+'"]').delay(300).fadeIn(300);
+  }
+
+  self.deleteInlineItem = function(obj)
+  {
+      var deleteKey = $(obj).attr('deleteConfirmKey');
+      var deleteContainerKey = $(obj).attr('containerKey');
+
+      self.editDiv.find('div[subSectionKey="'+deleteContainerKey+'"]').hide(200, function(e){
+          self.editDiv.find('div[subSectionKey="'+deleteContainerKey+'"]').remove();
+      });
+
+      if (deleteContainerKey.search(/\-NEW_/) == -1)
+      {
+        self.editDiv.find('#editForm').append('<input type="hidden" name="'+deleteKey+'" deleter="yes" />');
+      }
+  }
+
+  self.goToClone = function()
+  {
+        window.location = '/'+self.dataset.route+'/clone/{{#data:key/objId}}';
+  }
+
+
+        self.editDiv.find('#cloneBtn').on('click', self.goToClone);
+        self.editDiv.find('#deleteBtn').on('click', self.showConfirm);
+
+        self.editDiv.find('#deleteConfirmBtn').attr('onclick', 'javascript:editF_'+self.reqId+'.deleteItem();');
+
+        console.log("self.editDiv.find('#deleteBtn')", self.editDiv.find('#deleteBtn'))
+        console.log("self.editDiv.find('#deleteConfirmBtn')", self.editDiv.find('#deleteConfirmBtn'))
+
+  self.deleteItem = function()
+  {
+
+      var errTime = 1350;
+      self.editDiv.find('#editSubmitBtn').hide();
+      self.editDiv.find('#deleteConfirmBtn').hide();
+      self.editDiv.find('#deleteBtn').hide();
+      self.editDiv.find('#warning').hide();
+      self.editDiv.find('#success').hide();
+      $.ajax({
+          url: '/'+self.dataset.route+'/delete/{{#data:key/objId}}',
+          type:'POST',
+          data:{},
+          success: function(result){
+
+              self.editDiv.find('#success').html("This item has been deleted");
+              self.editDiv.find('#success').show();
+              if (window.RB && typeof window.RB.onFormSaved === 'function') {
+                  if (splitScreens.length > 0)
+                  {
+                      closeSplitView(selectedScreen);
+                  }
+
+                        window.RB.onFormSaved('{{#data:key/objId}}', {}, 'delete', self.currData);
+
+              } else {
+                setTimeout(function() {
+                    if (splitScreens.length > 0)
+                    {
+                        closeSplitView(selectedScreen);
+                    }
+                    else
+                    {
+                        window.location.href = '/'+self.dataset.route;
+                    }
+                }, 1000);
+              }
+
+          },
+          error:function(result){
+              self.editDiv.find('#deleteBtn').delay(350).fadeIn(300);
+              self.editDiv.find('#editSubmitBtn').delay(350).fadeIn(300);
+              self.editDiv.find('#warning').hide();
+              self.editDiv.find('#warning').html("Could not delete this item: ["+JSON.parse(result.responseText).message+']');
+              self.editDiv.find('#warning').delay(50).fadeIn(300);
+              errTime = 500;
+          },
+          complete:function(){
+              setTimeout(function()
+              {
+                  self.editDiv.find('#editSubmitBtn').fadeIn(250);
+              }, errTime);
+          }
+      });
+  }
+
+    self.formObj = buildForm(self.editDiv.find('#inputs'), self.dataset, self.currData);
+
+   globalForms[self.reqId] = self.formObj;
+
+    self.editDiv.find('.modelName').html(self.dataset.name);
+
+    self.editDiv.find('#editForm').submit(function(e) {
+        e.preventDefault();
+        self.editDiv.find('#editSubmitBtn').hide();
+        self.editDiv.find('#editLoading').show(250);
+        self.editDiv.find('#warning').hide();
+        self.editDiv.find('#success').hide();
+        var errTime = 1350;
+
+        self.editDiv.find('#editArea').parent().animate({scrollTop:self.editDiv.find('#editArea').parent()[0].scrollHeight}, 'slow');
+
+        //display none form values...
+        var hiddens = $(e.currentTarget).find('div:hidden').find('input:enabled, select:enabled').not( 'input[type="hidden"]' );
+
+
+        hiddens.attr('disabled', 'disabled');
+
+        var checkboxes = $(e.currentTarget).find('input[type="checkbox"]');
+        $.each( checkboxes, function( key, value ) {
+            if (value.checked === false) {
+                value.value = 'false';
+            } else {
+                value.value = 'true';
+            }
+            $(value).attr('type', 'hidden');
+        });
+
+        var editables = $(e.currentTarget).find('.editable');
+        $.each( editables, function( key, value ) {
+            var text = $(value)[0].innerText;//.text();
+            if ($(value).attr('allowhtml'))
+            {
+                text = $(value)[0].innerHTML;
+            }
+            var key = $(value).attr('name');
+
+
+            var field = $(document.createElement('input'));
+            field.attr('value', text);
+            field.attr('name', key);
+            field.attr('id', 'temp_'+key);
+            field.addClass('temp_field');
+            field.attr('type', 'hidden');
+            $(value).parent().append(field);
+        });
+
+        var calendarInputs = $(e.currentTarget).find('.calendarInput');
+        $.each( calendarInputs, function( key, value ) {
+            var inVal = $(value).val();
+            var outVal = new Date(inVal);
+            if ($(value).attr('stamp') == '1')
+            {
+                outVal = new Date(inVal).getTime();
+            }
+
+
+            $(value).attr('tempVal', inVal);
+            $(value).val(outVal);
+        });
+
+        var insData = new FormData(e.currentTarget);
+//        var insData = $(e.currentTarget).serialize();
+
+        if (self.context === "create")
+        {
+            $(e.currentTarget).find(':disabled').each(function(i, element) {
+                if ($(element).attr('name'))
+                {
+                    insData.append($(element).attr('name'), $(element).val());
+                }
+            })
+            insData.append('_id', '{{#data:key/objId}}');
+        }
+
+        hiddens.removeAttr('disabled');
+
+        self.editDiv.find('.temp_field').remove();
+        $.each( checkboxes, function( key, value ) {
+            $(value).attr('type', 'checkbox');
+        });
+
+        $.each( calendarInputs, function( key, value ) {
+            $(value).val($(value).attr('tempVal'));
+        });
+
+        var useRoute = '/'+self.dataset.route+'/update/{{#data:key/objId}}';
+
+        switch (self.context)
+        {
+            case 'create':
+            {
+                useRoute = '/'+self.dataset.route+'/create';
+                break;
+            }
+            case 'auth':
+            {
+                useRoute = '/'+self.dataset.route+'/login';
+                break;
+            }
+            case 'clone':
+            {
+                useRoute = '/'+self.dataset.route+'/clone/{{#data:key/objId}}';
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+
+
+        $.ajax({
+            url: useRoute,
+            dataType: "json",
+            type:'POST',
+            data:insData,
+            cache: false,
+            contentType: false,
+            processData: false,
+            success: function(result){
+                console.log('result', result);
+                console.log('resultData', result['data']);
+                if ((typeof result['data'] != 'undefined') &&
+                        (typeof result['data']['result'] != 'undefined'))
+                {
+                    var newData = result['data']['result'];
+                    self.formObj.resetData(newData);
+                }
+
+         /*       $.each( calendarInputs, function( key, value ) {
+                    $(value).val($(value).attr('tempVal'));
+                });*/
+
+                self.editDiv.find('#success').show();
+
+                if (window.RB && typeof window.RB.onFormSaved === 'function') {
+                  window.RB.onFormSaved(newData._id, newData, self.context, self.currData);
+                    if ((self.context == 'create') && (splitScreens.length > 0))
+                    {
+                        closeSplitView(selectedScreen);
+                        setTimeout(function(){
+                            renderSplitView('/'+self.dataset.route+'/view/'+newData._id, 'true');
+                        }, 1000);
+
+                    }
+                    else
+                    {
+                      setTimeout(function() {
+                          self.editDiv.find('#success').fadeOut(300);
+                      }, 1000);
+                    }
+                } else {
+                  switch (self.context)
+                  {
+
+
+                      case 'create':
+                      {
+                          if (splitScreens.length > 0)
+                          {
+                              closeSplitView(selectedScreen);
+                              renderSplitView('/'+self.dataset.route+'/view/'+newData._id);
+                          }
+                          else
+                          {
+                              setTimeout(function() {
+                                  window.location.href = '/'+self.dataset.route;
+                              }, 1000);
+                          }
+
+                          break;
+                      }
+                      case 'auth':
+                      {
+                          setTimeout(function() {
+                              window.location.href = '/';
+                          }, 1000);
+                          break;
+                      }
+                      default:
+                      {
+                          setTimeout(function() {
+                              self.editDiv.find('#success').fadeOut(300);
+                          }, 1000);
+                          break;
+                      }
+                  }
+                }
+
+
+
+            },
+            error:function(result){
+                var message = self.context === 'auth' ? 'Could not log you in ' : "Could not save changes ";
+                self.editDiv.find('#warning').hide();
+                self.editDiv.find('#warning').html(message+" ["+JSON.parse(result.responseText).message+']');
+                self.editDiv.find('#warning').delay(50).fadeIn(300);
+                self.editDiv.find('#editLoading').hide(50);
+                errTime = 500;
+            },
+            complete:function(){
+                setTimeout(function()
+                {
+                    self.editDiv.find('#editSubmitBtn').fadeIn(250);
+                    self.editDiv.find('#editLoading').hide(50);
+                }, errTime);
+            }
+        });
+    });
+
+    }
+
+    var editF_{{#data:key/requestId}}; // || null;
+
+    var buildData_{{#data:key/requestId}};
+    setTimeout(function(){
+        editF_{{#data:key/requestId}} = new formEdit_{{#data:key/requestId}}(buildData_{{#data:key/requestId}} || null);
+    }, 5);
+
+
+
+
+
+</script>
+
+</body>
+</html>

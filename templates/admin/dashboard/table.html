@@ -1,0 +1,42 @@
+
+
+<script>
+
+    loadDashboardData('{{#data:key/dashboardId}}', '{{#data:key/dashboardQuery}}', function(err, list) {
+        var dashboardId = 'dashboard_{{#data:key/dashboardId}}';
+
+        renderChart['{{#data:key/chartType}}'](dashboardId,
+                list.list,
+                '{{#data:key/chartX}}',
+                '{{#data:key/chartY}}',
+                '{{#data:key/timeFormat}}',
+                '{{#data:key/timeFill}}',
+                '{{#data:key/minTime}}',
+                '{{#data:key/maxTime}}',
+                '{{#data:key/pivotFormat}}');
+    });
+
+</script>
+<style>
+
+    .bar {
+        fill: steelblue;
+    }
+
+    .bar:hover {
+        fill: brown;
+    }
+
+    .axis-x path {
+        display: none;
+    }
+
+    .line {
+        fill: none;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+    }
+
+</style>
+
+<svg id="dashboard_{{#data:key/dashboardId}}" style="width:100%; height:100%;"></svg>

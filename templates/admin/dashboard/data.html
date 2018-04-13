@@ -1,0 +1,708 @@
+<style>
+    div.tooltip {
+        position: absolute;
+        text-align: center;
+        width: auto;
+        min-width:80px;
+        max-width:150px;
+        overflow:hidden;
+        height: 28px;
+        padding: 4px;
+        font: 12px sans-serif;
+        background: #fff;
+        box-shadow:2px 2px 0px rgba(0,0,0,0.1);
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+</style>
+
+<script>
+
+
+    function loadDashboardData(id, query, callback)
+    {
+        $('#dashboard_'+id).html('query = '+query);
+        //query += '?$group=1';
+        $.ajax({
+            url: '/'+query,
+            dataType: "json",
+            type:'GET',
+            success: function(result){
+
+                console.log('result', result);
+               // console.log('resultData', result['data']);
+
+
+                callback(null, result.data);
+            },
+            error:function(result){
+                console.log("error ", result);
+            },
+            complete:function(){
+                console.log("done");
+            }
+        });
+    }
+
+    var renderChart = function() {};
+
+    renderChart.table = function(_id, data, xKey, yKey, timeFormat, timeFill, minTime, maxTime, pivotFormat)
+    {
+        var ySplit = yKey.split(',');
+        console.log('ySplit', ySplit);
+        yKey = ySplit;
+
+        var xSplit = xKey.split(',');
+        console.log('xSplit', xSplit);
+        xKey = xSplit;
+
+        $('#'+_id).replaceWith('<div id="'+_id+'"></div>');
+
+        var th = '<th style="width:200px;">&nbsp;</th>';
+        for (var i=0; i<xKey.length; i++)
+        {
+            th += '<th id="'+_id+'_th_'+xKey[i]+'">'+xKey[i]+'</th>';
+        }
+
+
+        /*
+         {
+         "_id": "West Valley City:84119",
+         "count": 1,
+         "average": 50000,
+         "total": 50000
+         },
+         {
+         "_id": "Salt Lake City:84112",
+         "count": 2,
+         "average": 117500,
+         "total": 235000
+         },
+        */
+
+        var outStr = '<table class="dashboardList" cellspacing="0" cellpadding="0">'+th;
+
+        var pivotReg = null;
+        if ((typeof pivotFormat == 'string') && (pivotFormat.length > 0))
+        {
+            pivotReg = new RegExp(pivotFormat);
+        }
+
+        function insCaps(setObj, outObj, caps, iter)
+        {
+
+            if (typeof outObj[caps[iter]] == 'undefined')
+            {
+                outObj[caps[iter]] = {};
+            }
+            if (typeof caps[iter+1] != 'undefined')
+            {
+                insCaps(setObj, outObj[caps[iter]], caps, iter+1);
+            }
+            else
+            {
+                outObj[caps[iter]] = setObj;
+            }
+        }
+
+        function iterate(inObj, iter)
+        {
+            var outObj = {};
+            if (typeof inObj[iter] == 'undefined')
+            {
+                return outObj;
+            }
+            for (var i=0; i<inObj.length; i++)
+            {
+                for (var d=0; d<yKey.length; d++)
+                {
+                    var insY = inObj[i][yKey[d]];
+
+                    if (pivotReg != null)
+                    {
+                        var captures = insY.split(pivotReg);
+                        console.log('caps', captures);
+
+
+                        insCaps(inObj[i], outObj, captures, 0);
+
+                    }
+                    else
+                    {
+                        outObj[insY] = inObj[i];
+                    }
+                }
+            }
+            return outObj;
+        }
+        var realData = iterate(data, 0);
+
+        console.log('realData', realData);
+
+        var totals = [];
+
+        function displayData(inObj, depth)
+        {
+            var insFirstCol = '';
+            var depthSet = false;
+            var hasSeen = [];
+
+            for (var key in inObj)
+            {
+                if (typeof inObj[key] == 'object') //y-axis
+                {
+                    if (typeof inObj[key][xKey[0]] == 'undefined')
+                    {
+                        outStr += '<tr style="background-color:#f6f6f6;">';
+                    }
+                    else
+                    {
+                        outStr += '<tr>';
+                        depthSet = true;
+                    }
+                    var depthMarkers = '';
+                    for (var i=0; i<depth; i++)
+                    {
+                        if (i < depth -1)
+                        {
+                            depthMarkers += '&nbsp;&nbsp;&nbsp;';
+                        }
+                        else if (depthSet == false)
+                        {
+                           // depthSet = true;
+                            depthMarkers += '\u2514&nbsp;';
+                        }
+                        else
+                        {
+                            depthMarkers += '<span style="margin-left:14px;">&nbsp;</span>';
+                        }
+                    }
+                    outStr += '<td style="text-align:left;">'+depthMarkers+key+'</td>';
+                    if (typeof inObj[key][xKey[0]] == 'undefined')
+                    {
+                        for (var i=0; i<xKey.length; i++)
+                        {
+                            outStr += '<td>&nbsp;</td>';
+                        }
+                    }
+                    displayData(inObj[key], depth+1);
+                    outStr += '</tr>';
+                }
+                else //x-axis...
+                {
+                    for (var i=0; i<xKey.length; i++)
+                    {
+                        if (hasSeen.indexOf(xKey[i]) == -1)
+                        {
+                            hasSeen.push(xKey[i]);
+                            outStr += '<td>'+inObj[xKey[i]]+'</td>';
+
+                            if (typeof totals[i] == 'undefined')
+                            {
+                                totals.push(parseFloat(inObj[xKey[i]]));
+                            }
+                            else
+                            {
+                                totals[i] += parseFloat(inObj[xKey[i]]);
+                            }
+
+                        }
+
+                    }
+                  /*  if (xKey.indexOf(key) != -1)
+                    {
+                        outStr += '<td>'+inObj[key]+'</td>';
+                    }*/
+                }
+            }
+        }
+
+        displayData(realData, 0);
+
+        console.log('totals', totals);
+
+        if (totals.length > 0)
+        {
+            outStr += '<tr style=" font-weight:bold; "><td style="text-align:right; padding-right:10px; border-top:2px solid #000;">Total</td>';
+
+            for (var i =0; i<totals.length; i++)
+            {
+                outStr += '<td style="border-top:2px solid #000;">'+totals[i]+'</td>'
+            }
+
+            outStr += '</tr>';
+        }
+
+
+
+        /*var seen = [];
+        for (var i=0; i<data.length; i++)
+        {
+            for (var d=0; d<yKey.length; d++)
+            {
+                var insY = data[i][yKey[d]];
+
+                var hasSetBeenSeen = false;
+                if (pivotReg != null)
+                {
+                    var captures = pivotReg.exec(insY);
+                    console.log('captures', captures);
+                    insY = '<table class="dashboardList"><tr>';
+                    var tds = '';
+                    for (var j=1; j<captures.length; j++)
+                    {
+
+                        if (j == 1)
+                        {
+                            if (seen.indexOf(captures[j]) != -1)
+                            {
+                                tds += '<td style="width:50%;"></td>';
+                            }
+                            else
+                            {
+                                seen.push(captures[j]);
+                                hasSetBeenSeen = true;
+                                tds += '<td style="width:50%; border-top:1px solid #cacaca;">'+captures[j]+'</td>';
+                            }
+                        }
+                        else
+                        {
+                            if (hasSetBeenSeen == true)
+                            {
+                                tds += '<td style="width:50%; border-top:1px solid #cacaca;">'+captures[j]+'</td>';
+                            }
+                            else
+                            {
+                                tds += '<td style="width:50%;">'+captures[j]+'</td>';
+                            }
+                        }
+                    }
+                    insY += tds+'</tr></table>';
+                }
+
+                var insFirstCol = '<td>'+insY+'</td>';
+
+                var rowData = insFirstCol;
+                for (var j=0; j<xKey.length; j++)
+                {
+                    if (hasSetBeenSeen == true)
+                    {
+                        rowData += '<td style="border-top:1px solid #cacaca;">'+data[i][xKey[j]]+'</td>';
+                    }
+                    else
+                    {
+                        rowData += '<td>'+data[i][xKey[j]]+'</td>';
+                    }
+                }
+                outStr += '<tr>'+rowData+'</tr>';
+            }
+        }*/
+
+
+        outStr += '</table>';
+
+        /*if (obj.dataSource.length == 0)
+        {
+            outStr += '<div class="well warning">Could not find any results.</div>';
+        }*/
+
+        $('#'+_id).append(outStr);
+
+
+    }
+
+    renderChart.bar = function (_id, data, xKey, yKey)
+    {
+        var ySplit = yKey.split(',');
+        console.log('ySplit', ySplit);
+        yKey = ySplit;
+
+        var svg = d3.select('#'+_id),
+                margin = {top: 20, right: 20, bottom: 10, left: 40},
+                width = $('#'+_id).outerWidth() - margin.left - margin.right,
+                height = $('#'+_id).outerHeight() - margin.top - margin.bottom;
+
+        console.log('height', height);
+        var x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+                y = d3.scaleLinear().rangeRound([height, 0]);
+
+        var g = svg.append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var domainYMin = [];
+        var domainYMax = [];
+        for (var i=0; i<yKey.length; i++)
+        {
+            domainYMin.push(d3.min(data, function(d) { return d[yKey[i]]; }));
+            domainYMax.push(d3.max(data, function(d) { return d[yKey[i]]; }));
+        }
+        var domainY = domainYMin.concat(domainYMax).concat([0]);
+
+        x.domain(data.map(function(d) { return d[xKey]; }));
+        y.domain(d3.extent(domainY));
+
+        g.append("g")
+                .attr("class", "xaxis axis")
+            .attr('font-size', '5px')
+                .attr("transform", "translate(0," + height + ")")
+            .style("text-anchor", "start")
+                .call(d3.axisBottom(x));
+
+        g.append("g")
+                .attr("class", "axis axis-y")
+            //.call(d3.axisLeft(y).ticks(10, "%"))
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("dy", "0.71em")
+                .attr("text-anchor", "end");
+
+        g.selectAll(".xaxis text")  // select all the text elements for the xaxis
+            .attr("transform", function(d) {
+                return "translate(" + this.getBBox().height*-1.15 + "," + -10 + ")rotate(-90)";
+            });
+
+        var div = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        for (var i=0; i<yKey.length; i++)
+        {
+            var key = yKey[i];
+            var bW = (x.bandwidth() / yKey.length);
+            g.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("fill", chartFillColors[i%chartFillColors.length])
+                .attr("x", function(d) { return x(d[xKey]) + (bW * i); })
+                .attr("y", function(d) { return y(d[key]); })
+                .attr("width", bW)
+                .attr("height", function(d) { return height - y(d[key]); })
+                .style('opacity', 0.7)
+                .on("mouseover", function(d) {
+                    console.log('d = ', d);
+                    d3.select(this).transition().duration(200).style('opacity', 1);
+                    div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    div	.html(d._id+'<br/><strong>'+Math.round(d.count)+'</strong>')
+                        .style("left", (d3.event.pageX + 10) + "px")
+                        .style("top", (d3.event.pageY - 33) + "px");
+                })
+                .on("mouseout", function(d) {
+                    d3.select(this).transition().duration(200).style('opacity', 0.7);
+                    div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    // d.attr("fill", 'rgba(0,0,0,0)');
+                });;
+        }
+
+    }
+
+    renderChart.donut = function (_id, data, xKey, yKey)
+    {
+        renderChart.pie(_id, data, xKey, yKey, true);
+    }
+
+    renderChart.pie = function (_id, data, xKey, yKey, doDonut)
+    {
+        var ySplit = yKey.split(',');
+        console.log('ySplit', data);
+        //yKey = ySplit;
+
+        var svg = d3.select('#'+_id),
+                margin = {top: 0, right: 0, bottom: 0, left: 0},
+                width = $('#'+_id).outerWidth() - margin.left - margin.right,
+                height = $('#'+_id).outerHeight() - margin.top - margin.bottom;
+
+        var radius = Math.min(width, height) / 2;
+
+        var x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+                y = d3.scaleLinear().rangeRound([height, 0]);
+
+        //var g = svg.append("g")
+          //      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var arc = null;
+        var labelArc = null;
+
+        if (doDonut == true)
+        {
+            arc = d3.arc()
+                    .innerRadius(radius - 40)
+                    .outerRadius(radius);
+            labelArc = d3.arc()
+                    .outerRadius(radius - 40)
+                    .innerRadius(radius);
+        }
+        else
+        {
+            labelArc = d3.arc()
+                    .outerRadius(radius - 40)
+                    .innerRadius(radius - 40);
+            arc = d3.arc()
+                    .innerRadius(0)
+                    .outerRadius(radius);
+        }
+
+
+
+
+        var pie = d3.pie().value(function(d) { return d[yKey]; });
+
+        var color = d3.scaleOrdinal()
+                .range(chartFillColors);
+
+        svg.attr("width", width)
+            .attr("height", height);
+
+        var centerX = (radius);
+        var centerY = (radius)
+
+        var g = svg.selectAll(".arc")
+                .data(pie(data))
+                .attr("width", width)
+                .attr("height", height)
+                .enter().append("g").attr("transform", "translate(" + centerX + "," + centerY + ")")
+                .attr("class", "arc");
+
+        g.append("path")
+                .attr("d", arc)
+                .style("fill", function(d) { return color(d.data[xKey]); });
+
+        g.append("text")
+            .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+            .attr("dy", ".35em")
+            .attr("text-anchor", "middle")
+            .text(function(d) { return d.data[yKey]; });
+
+        for (var i=0; i<data.length; i++)
+        {
+            g.append("text")
+                .attr("dx", (radius + 40))
+                .attr("dy", (-radius + 40) + (i*25))
+                .text(data[i][xKey]);
+
+            g.append("rect")
+                .attr("x", (radius + 40) - 13)
+                .attr("y", ((-radius + 40) + (i*25)) - 10)
+                .attr("width", 10)
+                .attr("height", 10)
+                .style("fill", function(d) { return color(data[i][xKey]); });
+        }
+
+
+
+        if ((doDonut == true) && (data.length > 0))
+        {
+            var total = 0;
+
+            for (var i=0; i<data.length; i++)
+            {
+                total += data[i][yKey];
+            }
+
+            var percent = 0;
+
+            if (total > 0)
+            {
+                var percent = Math.round((data[0][yKey] / total) * 100);
+            }
+
+            g.append("text")
+                .attr("dy", "2.5em")
+                .attr("text-anchor", "middle")
+                .text(data[0][xKey]);
+
+            g.append("text")
+                .attr("font-size", "4em")
+                .attr("text-anchor", "middle")
+                .text(percent+"%");
+        }
+
+
+
+    }
+
+    renderChart.line = function (_id, data, xKey, yKey, tFormat, tFill, minTime, maxTime)
+    {
+        var ySplit = yKey.split(',');
+
+        console.log('ySplit', ySplit);
+        yKey = ySplit;
+
+        var svg = d3.select('#'+_id),
+            margin = {top: 20, right: 20, bottom: 50, left: 50},
+            width = $('#'+_id).outerWidth() - margin.left - margin.right,
+            height = $('#'+_id).outerHeight() - margin.top - margin.bottom,
+            g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var parseTime = d3.timeParse(tFormat);
+        var format = d3.timeFormat(tFormat);
+
+        var x = d3.scaleTime()
+                .rangeRound([0, width]);
+
+        var y = d3.scaleLinear()
+                .rangeRound([height, 0]);
+
+        var date_range;
+        if ((minTime != '') && (maxTime != ''))
+        {
+            date_range = d3['time'+capitalizeFirstLetter(tFill)](parseTime(minTime), parseTime(maxTime), 1);
+        }
+        else
+        {
+            date_range = d3['time'+capitalizeFirstLetter(tFill)](parseTime(data[0][xKey]), parseTime(data[data.length-1][xKey]), 1);
+        }
+
+        var m = d3.map(data, function(d) { return parseTime(d[xKey]) });
+        var newData = date_range.map(function(bucket) {
+
+            var outObj = {};
+            outObj._id = format(new Date(bucket));
+            for (var i=0; i<yKey.length; i++)
+            {
+                outObj[yKey[i]] = 0;
+            }
+            return m.get(bucket) || outObj;
+        });
+
+        if ((minTime == '') | (maxTime == ''))
+        {
+            newData.push(data[data.length-1]);
+        }
+
+       // console.log('data', data);
+     //   console.log('newData', newData);
+        data = newData;
+
+        var domainYMin = [];
+        var domainYMax = [];
+        for (var i=0; i<yKey.length; i++)
+        {
+            domainYMin.push(d3.min(data, function(d) { return d[yKey[i]]; }));
+            domainYMax.push(d3.max(data, function(d) { return d[yKey[i]] + (d[yKey[i]]*0.15); }));
+        }
+
+        var domainY = domainYMin.concat(domainYMax);
+
+        x.domain(d3.extent(data, function(d) { return parseTime(d[xKey]); }));
+        y.domain(d3.extent(domainY));
+
+        g.append("g")
+                .attr("class", "xaxis axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+        g.append("g")
+                //.attr("class", "axis axis-y")
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("fill", "#007df3")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", "0.71em")
+                .style("text-anchor", "end")
+                   // .text("Price ($)");
+
+        g.selectAll(".xaxis text")  // select all the text elements for the xaxis
+            .attr("transform", function(d) {
+                return "translate(" + this.getBBox().height*-2 + "," + this.getBBox().height + ")rotate(-45)";
+            });
+
+        for (var i=0; i<yKey.length; i++)
+        {
+            var key = yKey[i];
+
+            var line = d3.line()
+                  //  .curve(d3.curveCatmullRom)
+                    .x(function(d) { return x(parseTime(d[xKey])); })
+                    .y(function(d) { return y(d[key]); });
+
+            var area = d3.area()
+            //  .curve(d3.curveCatmullRom)
+                .x(function(d) { return x(parseTime(d[xKey])); })
+                .y0(height)
+                .y1(function(d) { return y(d[key]); });
+
+            /*var point = d3.point()
+            //  .curve(d3.curveCatmullRom)
+                .x(function(d) { return x(parseTime(d[xKey])); })
+                .y(function(d) { return y(d[key]); });*/
+
+
+            g.append("path")
+                .datum(data)
+                .attr("fill", chartFillColorsLight[i%chartFillColorsLight.length])
+                .attr("d", area);
+
+            g.append("path")
+                    .datum(data)
+                    .attr("stroke-width", 1)
+                    .attr("stroke", chartFillColors[i%(chartFillColors.length-1)])
+                .attr("fill", "none")
+                    .attr("d", line);
+
+            var div = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            for (var k=0; k<data.length; k++)
+            {
+                g.append("circle")
+                    .attr("cx", x(parseTime(data[k][xKey])) )
+                    .attr("cy", y(data[k][yKey]) )
+                    .attr('r', 8)
+                    .datum({count:data[k][yKey], time:parseTime(data[k][xKey])})
+                    .attr("fill", chartFillColorsLight[i%(chartColors.length-1)])
+                    .style('opacity', 0)
+                    .on("mouseover", function(d) {
+                        console.log('d = ', d);
+                        d3.select(this).transition().duration(200).style('opacity', 1);
+                        div.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        div	.html(d.time.toDateString()+'<br/><strong>'+Math.round(d.count)+'</strong>')
+                            .style("left", (d3.event.pageX + 10) + "px")
+                            .style("top", (d3.event.pageY - 33) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        d3.select(this).transition().duration(200).style('opacity', 0);
+                        div.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                       // d.attr("fill", 'rgba(0,0,0,0)');
+                    });
+
+                g.append("circle")
+                    .attr("cx", x(parseTime(data[k][xKey])) )
+                    .attr("cy", y(data[k][yKey]) )
+                    .attr('r', 2)
+                    .attr("fill", chartColors[i%(chartColors.length-1)])
+                    .style('pointer-events', 'none');
+
+            }
+
+           /* points.exit().remove();
+            points.attr('class', function(d,i) { return 'point point-' + i });
+            d3.transition(points)
+                .attr('cx', function(d) { return x(d[0]) })
+                .attr('cy', function(d) { return y(d[1]) })
+                .attr('r', dotRadius()); */
+        }
+
+    }
+
+
+    function capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    var chartColors = ['rgba(41,159,255,1)', 'rgba(58, 82, 146, 1)', 'rgba(77,82,95,1)', 'rgba(205,240,180,1)'];
+    var chartFillColors = ['rgba(41,159,255,0.5)', 'rgba(58, 82, 146, 0.5)', 'rgba(77,82,95,0.5)', 'rgba(205,240,180,0.5)'];
+    var chartFillColorsLight = ['rgba(41,159,255,0.25)', 'rgba(58, 82, 146, 0.25)', 'rgba(77,82,95,0.25)', 'rgba(205,240,180,0.25)'];
+
+</script>

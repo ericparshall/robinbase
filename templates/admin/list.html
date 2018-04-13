@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <title>{{#data:key/"project.title"}}</title>
+
+    {{#Include:template/"templates.admin.main-css"}}
+
+    {{#Include:template/"templates.admin.form"}}
+    {{#Include:template/"templates.admin.meta"}}
+
+</head>
+<body>
+
+{{#Include:template/"templates.admin.sidebar"}}
+{{#Include:template/"templates.admin.header"}}
+
+<div class="contentArea">
+{{#Table}}
+</div>
+
+<script>
+    function buildPagination()
+    {
+        var total = {{#data:key/"tableHelper.total"}};
+        var page = {{#data:key/"tableHelper.page"}};
+        var paginate = {{#data:key/"tableHelper.paginate"}};
+        var route = '{{#data:key/"tableHelper.modelRoute}}';
+
+        if (total == 0)
+        {
+            $('#paginate').remove();
+            $('.resultLabel').css('text-align', 'center');
+            return;
+        }
+
+        var parent = $('#paginate');
+        if (total <= paginate)
+        {
+            parent.append('<option value="1">1</option>');
+        }
+        else
+        {
+            var pageCount = Math.ceil(total/paginate);
+            var usePages = pageCount;
+            if (usePages > 9)
+            {
+                usePages = 9;
+            }
+            var foundInList = [];
+            for (var i=0; i<usePages; i++)
+            {
+                var insNum = i;
+
+                if (usePages == 9)
+                {
+
+                    var adj = (page - 4 < 0) ? 4 - Math.abs(page - 4) : 4;
+
+                    var insPage = page - (adj - i);
+
+
+                    if (i == 8)
+                    {
+                        insNum = pageCount-1;
+                    }
+                    else if (i == 0)
+                    {
+                        insNum = 0;
+                    }
+                    else
+                    {
+                        insNum = (insPage != 0) ? insPage : 0;
+                        if (insNum >= pageCount)
+                        {
+                            continue;
+                        }
+                    }
+
+
+                }
+                var selection = '';
+                if (insNum == page)
+                {
+                    selection = ' selected="selected"';
+                }
+                if (foundInList.indexOf(insNum) != -1)
+                {
+                    continue;
+                }
+                foundInList.push(insNum);
+                parent.append('<option value="'+insNum+'"'+selection+'>'+Number(insNum+1)+'</option>');
+            }
+        }
+
+        parent.on('change', function(e){
+           window.location.href = '/'+route+'/list/'+$(e.currentTarget).val()+window.location.search;
+        });
+    }
+
+    function buildSorts()
+    {
+        $('.thKey').each(function(index, item){
+            $(item).on('click', function(e) {
+               var current = $(e.currentTarget);
+                var doSort = 'desc';
+
+                if (current.hasClass('desc'))
+                {
+                    doSort = 'asc';
+                }
+
+                window.location.href = window.location.pathname+
+                        '?sk='+current.attr('key')+
+                        '&sd='+doSort;
+            });
+        });
+    }
+    buildPagination();
+    buildSorts();
+
+</script>
+
+</body>
+</html>

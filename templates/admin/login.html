@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <title>{{#data:key/"project.title"}}</title>
+
+    {{#Include:template/"templates.admin.main-css"}}
+
+    {{#Include:template/"templates.admin.form"}}
+    {{#Include:template/"templates.admin.meta"}}
+
+</head>
+<body>
+
+{{#Include:template/"templates.admin.sidebar"}}
+
+{{#Include:template/"templates.admin.header"}}
+
+<div class="contentArea extraPadding">
+
+    <div id="editArea" class="editArea well well-login">
+
+        <form id="editForm" method="post">
+            <div id="inputs"></div>
+            <div class="controlSection">
+                <input type="submit" id="editSubmitBtn" class="btn" value="Login"/>
+            </div>
+            <p>Forgot your password? <a href="/{{#data:key/route}}/forgot-password">Reset It</a></p>
+        </form>
+    </div>
+    <div id="warning" class="well warning" style="display:none;"></div>
+    <div id="success" class="well success" style="display:none;">Login Successful!</div>
+</div>
+
+<script type="text/javascript">
+    var dataset = JSON.parse('{{#data:key/view/withSlashesJSON/1}}');
+    var currData = JSON.parse("{{#data:key/obj/withSlashesJSON/1}}");
+    var context = "{{#data:key/context/withSlashes/1}}" || "edit";
+
+    dataset.context = context;
+
+    buildForm($('#inputs'), dataset, currData);
+    $('.modelName').html(dataset.name);
+
+    $('#editForm').submit(function(e) {
+        e.preventDefault();
+        $('#editSubmitBtn').hide();
+        $('#warning').hide();
+        $('#success').hide();
+        var errTime = 1350;
+
+        var insData = $(e.currentTarget).serialize();
+
+        var useRoute = '/'+dataset.route+'/update/{{#data:key/objId}}';
+        var doCreate = false;
+        var doAuth = false;
+
+        doAuth = true;
+        useRoute = '/'+dataset.route+'/login';
+
+
+        $.ajax({
+            url: useRoute,
+            dataType: "json",
+            type:'POST',
+            data:insData,
+            success: function(result){
+
+                setTimeout(function() {
+                    window.location.href = '/';
+                }, 1000);
+
+            },
+            error:function(result){
+                var message = 'Could not log you in ' ;
+                $('#warning').hide();
+                $('#warning').html(message+" ["+JSON.parse(result.responseText).message+']');
+                $('#warning').delay(50).fadeIn(300);
+                errTime = 500;
+            },
+            complete:function(){
+                setTimeout(function()
+                {
+                    $('#editSubmitBtn').fadeIn(250);
+                }, errTime);
+            }
+        });
+    });
+
+
+
+
+</script>
+
+</body>
+</html>

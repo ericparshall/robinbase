@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <title>{{#data:key/"project.title"}}</title>
+
+    {{#Include:template/"templates.admin.main-css"}}
+    {{#Include:template/"templates.admin.meta"}}
+
+
+</head>
+<body>
+
+{{#Include:template/"templates.admin.sidebar"}}
+
+{{#Include:template/"templates.admin.header"}}
+
+<div class="contentArea extraPadding">
+    <div class="editData">Verify your account</div>
+    <div id="editArea" class="editArea well">
+        <p>Please wait while your account is verified.</p>
+        <form id="verifyForm" style="display:none;">
+        </form>
+    </div>
+    <div id="warning" class="well warning" style="display:none;"></div>
+    <div id="success" class="well success" style="display:none;">Verification Successful!</div>
+</div>
+
+<script type="text/javascript">
+
+    var dataset = JSON.parse('{{#data:key/view/withSlashesJSON/1}}');
+
+    $('#verifyForm').submit(function(e) {
+        e.preventDefault();
+        $('#warning').hide();
+        $('#success').hide();
+        var errTime = 1350;
+
+        var insData = $(e.currentTarget).serialize();
+
+        var useRoute = '/'+dataset.route+'/verify';
+
+        $.ajax({
+            url: useRoute,
+            dataType: "json",
+            type:'POST',
+            data:insData,
+            success: function(result){
+                console.log('result', result);
+                console.log('resultData', result['data']);
+                $('#success').show();
+            },
+            error:function(result){
+                $('#warning').hide();
+                $('#warning').html(JSON.parse(result.responseText).message);
+                $('#warning').delay(50).fadeIn(300);
+                errTime = 500;
+            }
+
+        });
+    });
+
+    $(document).ready(function() {
+        $('#verifyForm').submit();
+    })
+
+
+
+
+</script>
+
+</body>
+</html>

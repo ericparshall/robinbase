@@ -1,0 +1,19 @@
+<div class="header"><div class="headerTitleText"><a href="/">{{#data:key/"project.title"}}</a></div>
+
+
+    <div class='siteLogo' onclick="window.location='/'">
+    </div>
+
+
+
+    {{#data:key/authLink}}
+    <div class="menuToggle" onclick="javascript:toggleMenu()"><i class="fa fa-bars" aria-hidden="true"></i></div>
+</div>
+<script>
+
+    function toggleMenu()
+    {
+        $('#sidebar').slideToggle();
+    }
+
+</script>

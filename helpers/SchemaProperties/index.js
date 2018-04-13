@@ -1,0 +1,13 @@
+exports.BooleanProperty = require('./BooleanProperty');
+exports.IntegerProperty = require('./IntegerProperty');
+exports.FloatProperty = require('./FloatProperty');
+exports.StringProperty = require('./StringProperty');
+exports.EmailProperty = require('./EmailProperty');
+exports.GuidProperty = require('./GuidProperty');
+exports.OptionsProperty = require('./OptionsProperty');
+exports.TimeStampProperty = require('./TimeStampProperty');
+exports.ArrayProperty = require('./ArrayProperty');
+exports.ObjectProperty = require('./ObjectProperty');
+exports.VariantProperty = require('./VariantProperty');
+exports.DateTimeProperty = require('./DateTimeProperty');
+exports.LocationProperty = require('./LocationProperty');

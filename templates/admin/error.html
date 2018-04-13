@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <title>{{#data:key/"project.title"}}</title>
+
+    {{#Include:template/"templates.admin.main-css"}}
+    {{#Include:template/"templates.admin.meta"}}
+
+</head>
+<body>
+
+{{#Include:template/"templates.admin.sidebar"}}
+
+{{#Include:template/"templates.admin.header"}}
+
+<div class="contentArea extraPadding">
+    <div class="well error">
+        Error:  {{#data:key/"error"}}
+    </div>
+</div>
+
+</body>
+</html>

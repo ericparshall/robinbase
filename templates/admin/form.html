@@ -1,0 +1,11 @@
+<script type="text/javascript">
+    {{#Include:template/"system.frontend.form"}}
+
+    var RBForm = RB.Form;
+    var buildForm = function (parentElem, formData, objData) {
+        var form = new RBForm(null, formData, objData);
+        form.run(parentElem[0]);
+        return form;
+    }
+
+</script>

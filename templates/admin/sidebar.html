@@ -1,0 +1,45 @@
+<div id="sidebar" class="sidebar">
+
+
+
+    {{#data:key/"tableHelper"
+        /str/"<div class='paginationSection'>
+                    <div class='resultLabel'>
+                        <span class='paginateLabel'>%label</span>
+                        <div class='paginateContainer'><select id='paginate'></select></div>
+                    </div>
+
+                </div>"}}
+
+    {{#data:key/"allowSearch"
+    /str/"
+    <div style='margin-left:12px; margin-top:12px;'>
+        <form method='get' action='/%modelRoute/%searchPath'>
+            <i class='fa fa-search' aria-hidden='true'></i>
+            <input type='text' class='searchField' name='search' placeholder='Search %name' value='%currentSearchTerm'>
+        </form>
+    </div>"}}
+
+    {{#data:key/"modelViewHelper"
+        /str/"<div class='heading'>%modelName</div>"}}
+
+    {{#data:key/"allowedActions.[]"
+        /str/"<a class='link %linkClass %active' href='%path'>
+                <span class='icon'><i class='%icon'></i></span> %text</a>}}
+
+    {{#data:key/"models"
+        /str/"<div class='heading'>
+                Manage
+            </div>"}}
+
+    {{#data:key/"models.[]"
+        /str/"<a class='link %active' href='/%route'><span class='icon'>%icon</span> %name</a>"}}
+
+
+    <div class="heading">
+        Your Profile
+    </div>
+    {{#data:key/authLink}}
+
+
+</div>
