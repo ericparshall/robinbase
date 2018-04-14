@@ -27,8 +27,8 @@
                 })
             })
 
-            dbApp.use(bodyParser.urlencoded({ extended: true })); // parse application/x-www-form-urlencoded
-            dbApp.use(bodyParser.json());
+            dbApp.use(bodyParser.urlencoded({ extended: true, limit: '50mb' })); // parse application/x-www-form-urlencoded
+            dbApp.use(bodyParser.json({limit: '50mb'}));
             dbApp.use(renderFunctions);
 
 
