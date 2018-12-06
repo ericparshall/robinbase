@@ -66,7 +66,19 @@
            function beginFrontEnd()
            {
                Debug.log("FRONTEND", "Starting website");
-               var feApp = express();
+               var feApp = express()
+
+               if (process.env.BUGSNAG_KEY) {
+                   const bugsnag = require('@bugsnag/js');
+                   const bugsnagExpress = require('@bugsnag/plugin-express')
+                   const bugsnagClient = bugsnag(process.env.BUGSNAG_KEY)
+
+                   bugsnagClient.use(bugsnagExpress)
+
+                   const middleware = bugsnagClient.getPlugin('express')
+                   feApp.use(middleware.requestHandler)
+                   feApp.use(middleware.errorHandler)
+               }
 
                // this needs to be set before any .use statements are run for the app.
                feApp.set('query parser', function(query){

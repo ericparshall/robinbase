@@ -31,6 +31,16 @@
             dbApp.use(bodyParser.json({limit: '50mb'}));
             dbApp.use(renderFunctions);
 
+            if (process.env.BUGSNAG_KEY) {
+                const bugsnag = require('@bugsnag/js');
+                const bugsnagExpress = require('@bugsnag/plugin-express')
+                const bugsnagClient = bugsnag(process.env.BUGSNAG_KEY)
+                bugsnagClient.use(bugsnagExpress)
+
+                const middleware = bugsnagClient.getPlugin('express')
+                dbApp.use(middleware.requestHandler)
+                dbApp.use(middleware.errorHandler)
+            }
 
             routes = _routes || [require('../../routes/adminRoutes')];
 
