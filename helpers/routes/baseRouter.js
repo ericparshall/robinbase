@@ -333,7 +333,10 @@ module.exports = function (App)
        {
             let processData = buildProcess(req, res);
 
-            if (!processData.isLoggedIn &&  req.path !== processData.loginURL)
+            if (!processData.isLoggedIn
+                && req.path !== processData.loginURL
+                && req.path !== '/users/forgot-password'
+                && req.path !== '/users/reset-password')
             {
                  console.log('REQ URL', req.path);
                  console.log('LOGIN URL', processData.loginURL);
