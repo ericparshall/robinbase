@@ -93,8 +93,8 @@
     "url": "https://github.com/robinsage-dev/robin-base-module/issues"
   },
   "dependencies": {
-    "@bugsnag/js": "^5.0.1",
-    "@bugsnag/plugin-express": "^5.0.1",
+    "@bugsnag/js": "^6.0.0",
+    "@bugsnag/plugin-express": "^6.0.0",
     "async": "2.1.1",
     "babel-preset-env": "1.6.0",
     "babelify": "7.3.0",
