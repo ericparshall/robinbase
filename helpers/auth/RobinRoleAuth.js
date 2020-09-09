@@ -96,6 +96,9 @@ module.exports = function(options)
             });
         });
     }
+    auth.sso = function(_account, callback) {
+        generateToken(_account, callback);
+    }
 
     if (enforceVerification)
     {
