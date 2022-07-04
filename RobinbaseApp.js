@@ -340,8 +340,9 @@ RobinbaseApp.prototype.buildFrontendFormScript = function buildFrontendFormScrip
         return done();
     }
 
+    const tmpDir = process.env.FRONT_END_TMP || __dirname
     const mainFormFilePath = nodepath.resolve(__dirname, './frontend/Form.js');
-    const tempDirPath = nodepath.resolve(__dirname, './_frontendtmp');
+    const tempDirPath = nodepath.resolve(tmpDir, './_frontendtmp');
     const tempFilePath = nodepath.resolve(tempDirPath, './form.js');
 
     fs.unlink(tempFilePath, function(err) {
