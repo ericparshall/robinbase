@@ -396,6 +396,7 @@ module.exports = function (App)
     adminRouter.all("/*", function (req, res) {
         if (req.method != 'GET' || res.locals.apiMode)
         {
+            Debug.error(`Request to ${req.path} not valid`);
             res.showError("Not found", 404);
         }
         else
